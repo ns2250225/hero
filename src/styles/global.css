@@ -1,0 +1,84 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+:root {
+  --bg-0: #0b0f18;
+  --bg-1: #141a26;
+  --bg-2: #1d2536;
+  --bg-3: #273149;
+  --line: #3a4763;
+  --text: #e6ecf5;
+  --text-dim: #9fb0c8;
+  --gold: #ffd24a;
+  --hp: #ff5a5a;
+  --exp: #8fd8ff;
+  --dps: #ff8a5a;
+  --survival: #6ad8a0;
+  --summon: #c070ff;
+  --economy: #ffd24a;
+  --common: #e6e6e6;
+  --rare: #4aa8ff;
+  --epic: #b76cff;
+  --legendary: #ffc83a;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-0);
+  color: var(--text);
+  font-family: 'Press Start 2P', 'Microsoft YaHei', 'PingFang SC', monospace;
+  font-size: 12px;
+  image-rendering: pixelated;
+  user-select: none;
+}
+
+body {
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+canvas {
+  image-rendering: pixelated;
+  display: block;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+input {
+  font-family: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-1);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 0;
+}

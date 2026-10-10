@@ -1,0 +1,25 @@
+{
+  "name": "pixel-horde",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "build:fast": "vite build",
+    "typecheck": "vue-tsc --noEmit",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "phaser": "^3.90.0",
+    "pinia": "^2.3.1",
+    "vue": "^3.5.43"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@vitejs/plugin-vue": "^5.2.4",
+    "typescript": "~5.8",
+    "vite": "^6.4.4",
+    "vue-tsc": "^2.2.12"
+  }
+}
