@@ -3,9 +3,29 @@ import type { MapConfig } from './maps';
 import { ENEMIES, ENEMY_MIN_WAVE } from './enemies';
 import { BOSSES } from './bosses';
 
-/** 出自 PRD 7.3 的难度曲线 */
-export function getWaveMultiplier(wave: number): number {
+/** 出自 PRD 7.3 的基础难度曲线 */
+export function baseWaveMultiplier(wave: number): number {
   return 1 + wave * 0.1 + Math.pow(wave, 1.2) * 0.02;
+}
+
+/**
+ * 怪物生命倍率。普通 / 挑战模式沿用基础曲线；
+ * 无尽模式 20 波后按指数爬升（每波 +9%），与英雄的乘法成长抗衡，保证后期仍有强度墙。
+ */
+export function getWaveMultiplier(wave: number, mode: GameMode = 'normal'): number {
+  const base = baseWaveMultiplier(wave);
+  if (mode !== 'endless' || wave <= 20) return base;
+  return base * Math.pow(1.09, wave - 20);
+}
+
+/**
+ * 怪物攻击倍率。无尽模式成长慢于生命（每波 +4%）：
+ * 推图压力来自越来越肉的海量怪物，而非后期一刀秒杀英雄。
+ */
+export function getWaveAttackMultiplier(wave: number, mode: GameMode = 'normal'): number {
+  const base = baseWaveMultiplier(wave);
+  if (mode !== 'endless' || wave <= 20) return base;
+  return base * Math.pow(1.04, wave - 20);
 }
 
 /** 怪物数量随波次增长（单通道高密度） */
@@ -50,17 +70,18 @@ export interface SpawnEntry {
 
 export function buildWave(o: WaveGenOptions): WaveProgress {
   const { wave, mode, map, rand } = o;
-  const mult = getWaveMultiplier(wave) * map.hpMult;
   const entries: SpawnEntry[] = [];
   const waveCount = Math.round(getWaveCount(wave) * map.countMult * (o.extraCount ?? 1));
 
   const pool = ENEMIES.filter((e) => (ENEMY_MIN_WAVE[e.id] ?? 1) <= wave);
   const normalPool = pool.filter((e) => !e.special);
   const specialPool = pool.filter((e) => e.special);
-  // 越高波次特殊怪比例越高
-  const specialRatio = Math.min(0.55, 0.04 + wave * 0.024);
-  const eliteChance = isEliteWave(wave, mode) ? 0.4 : Math.min(0.22, wave * 0.006);
-  const dense = getWaveMultiplier(wave);
+  // 越高波次特殊怪比例越高（无尽模式后期上限更高）
+  const specialCap = mode === 'endless' ? 0.75 : 0.55;
+  const specialRatio = Math.min(specialCap, 0.04 + wave * 0.024);
+  const eliteCap = mode === 'endless' ? 0.32 : 0.22;
+  const eliteChance = isEliteWave(wave, mode) ? (mode === 'endless' ? 0.5 : 0.4) : Math.min(eliteCap, wave * 0.006);
+  const dense = getWaveMultiplier(wave, mode);
 
   let t = 0;
   const baseInterval = Math.max(0.09, 0.62 - wave * 0.019) / (1 + (map.countMult - 1) * 0.5);

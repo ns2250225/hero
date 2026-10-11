@@ -96,4 +96,6 @@ export interface EnemySave {
   elite: boolean;
   boss: boolean;
   mult: number;
+  /** 攻击成长倍率；旧存档缺省时回落到 mult */
+  atkMult?: number;
 }

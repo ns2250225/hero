@@ -34,6 +34,8 @@ export class Enemy {
   maxHp: number;
   elite: boolean;
   mult: number;
+  /** 攻击成长倍率（无尽模式慢于生命成长） */
+  atkMult: number;
   speed: number;
   status: StatusState = emptyStatus();
   sprite: Phaser.GameObjects.Sprite;
@@ -57,13 +59,14 @@ export class Enemy {
   private scene: Phaser.Scene;
   private baseScale: number;
 
-  constructor(scene: Phaser.Scene, cfg: EnemyConfig, x: number, y: number, mult: number, elite: boolean) {
+  constructor(scene: Phaser.Scene, cfg: EnemyConfig, x: number, y: number, mult: number, elite: boolean, atkMult = mult) {
     this.scene = scene;
     this.id = nextId++;
     this.cfg = cfg;
     this.x = x;
     this.y = y;
     this.mult = mult;
+    this.atkMult = atkMult;
     this.elite = elite;
     const eliteHp = elite ? 3.4 : 1;
     const eliteAtk = elite ? 1.8 : 1;
@@ -89,7 +92,7 @@ export class Enemy {
   }
 
   get attackPower(): number {
-    return this.cfg.attack * this.mult * (this.elite ? 1.8 : 1);
+    return this.cfg.attack * this.atkMult * (this.elite ? 1.8 : 1);
   }
 
   get abilities(): EnemyAbility[] {
@@ -248,6 +251,8 @@ export class Boss {
   hp: number;
   maxHp: number;
   mult: number;
+  /** 攻击成长倍率（无尽模式慢于生命成长） */
+  atkMult: number;
   speed: number;
   sprite: Phaser.GameObjects.Sprite;
   hpBar: Phaser.GameObjects.Graphics;
@@ -264,13 +269,14 @@ export class Boss {
   status: StatusState = emptyStatus();
   scene: Phaser.Scene;
 
-  constructor(scene: Phaser.Scene, cfg: BossConfig, x: number, y: number, mult: number) {
+  constructor(scene: Phaser.Scene, cfg: BossConfig, x: number, y: number, mult: number, atkMult = mult) {
     this.scene = scene;
     this.id = nextId++;
     this.cfg = cfg;
     this.x = x;
     this.y = y;
     this.mult = mult;
+    this.atkMult = atkMult;
     this.maxHp = Math.round(cfg.maxHp * mult);
     this.hp = this.maxHp;
     this.speed = cfg.moveSpeed;
@@ -288,7 +294,7 @@ export class Boss {
   }
 
   get attackPower(): number {
-    return this.cfg.attack * this.mult;
+    return this.cfg.attack * this.atkMult;
   }
 
   depth(): number {

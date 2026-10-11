@@ -8,7 +8,7 @@ import { BOSS_MAP } from '@/data/bosses';
 import { MAP_MAP, type MapConfig } from '@/data/maps';
 import { RELIC_MAP } from '@/data/relics';
 import { SYNERGY_MAP } from '@/data/synergies';
-import { getWaveMultiplier, isBossWave, waveCategory, INTERMISSION_TIME } from '@/data/waves';
+import { getWaveMultiplier, getWaveAttackMultiplier, isBossWave, waveCategory, INTERMISSION_TIME } from '@/data/waves';
 import { EVENTS, BLESSINGS, CURSES, type MerchantOffer } from '@/data/events';
 import { drawCards, type CardContext } from '@/data/upgrades';
 import { Hero } from '../entities/Hero';
@@ -128,7 +128,7 @@ export class BattleScene extends Phaser.Scene implements SkillHost {
       for (const e of this.run.enemies) {
         const cfg = ENEMY_MAP[e.id];
         if (!cfg) continue;
-        const en = this.spawnEnemyAt(cfg, e.x, e.y, e.mult, e.elite);
+        const en = this.spawnEnemyAt(cfg, e.x, e.y, e.mult, e.elite, e.atkMult ?? e.mult);
         en.hp = Math.max(1, Math.min(en.maxHp, e.hp));
       }
       this.run.enemies = [];
@@ -884,8 +884,15 @@ export class BattleScene extends Phaser.Scene implements SkillHost {
 
   /* ---------------- 敌人 ---------------- */
 
-  private spawnEnemyAt(cfg: (typeof ENEMY_MAP)[string], x: number, y: number, mult: number, elite: boolean): Enemy {
-    const e = new Enemy(this, cfg, x, y, mult, elite);
+  private spawnEnemyAt(
+    cfg: (typeof ENEMY_MAP)[string],
+    x: number,
+    y: number,
+    mult: number,
+    elite: boolean,
+    atkMult = mult,
+  ): Enemy {
+    const e = new Enemy(this, cfg, x, y, mult, elite, atkMult);
     this.enemies.push(e);
     return e;
   }
@@ -893,9 +900,11 @@ export class BattleScene extends Phaser.Scene implements SkillHost {
   private spawnEnemy(cfgId: string, elite: boolean): void {
     const cfg = ENEMY_MAP[cfgId];
     if (!cfg) return;
-    const mult = getWaveMultiplier(this.run.wave.wave) * this.map.hpMult * this.difficultyMult;
+    const wave = this.run.wave.wave;
+    const mult = getWaveMultiplier(wave, this.run.mode) * this.map.hpMult * this.difficultyMult;
+    const atkMult = getWaveAttackMultiplier(wave, this.run.mode) * this.map.hpMult * this.difficultyMult;
     const x = LAYOUT.spawnX + this.rng.range(-LAYOUT.spawnVariance, LAYOUT.spawnVariance * 0.4);
-    this.spawnEnemyAt(cfg, x, this.laneYFor(cfg.abilities.includes('flying')), mult, elite);
+    this.spawnEnemyAt(cfg, x, this.laneYFor(cfg.abilities.includes('flying')), mult, elite, atkMult);
   }
 
   private laneYFor(flying: boolean): number {
@@ -1040,11 +1049,12 @@ export class BattleScene extends Phaser.Scene implements SkillHost {
       e.summonCd -= dt;
       if (e.summonCd <= 0) {
         e.summonCd = 7;
-        const mult = getWaveMultiplier(this.run.wave.wave) * this.map.hpMult * 0.55;
+        const mult = getWaveMultiplier(this.run.wave.wave, this.run.mode) * this.map.hpMult * 0.55;
+        const atkMult = getWaveAttackMultiplier(this.run.wave.wave, this.run.mode) * this.map.hpMult * 0.55;
         const cfg = ENEMY_MAP['skeleton'];
         if (cfg) {
           for (let i = 0; i < 2; i++) {
-            this.spawnEnemyAt(cfg, e.x - 20 - i * 24, e.y + (Math.random() - 0.5) * 30, mult, false);
+            this.spawnEnemyAt(cfg, e.x - 20 - i * 24, e.y + (Math.random() - 0.5) * 30, mult, false, atkMult);
           }
         }
         this.fx.ring(e.x, e.y - 16, 40, '#c070ff', 300);
@@ -1149,7 +1159,7 @@ export class BattleScene extends Phaser.Scene implements SkillHost {
       const c = ENEMY_MAP['slime'];
       if (c) {
         for (let i = 0; i < 2; i++) {
-          this.spawnEnemyAt(c, e.x + (i ? 18 : -18), e.y + (i ? 12 : -12), e.mult * 0.55, false);
+          this.spawnEnemyAt(c, e.x + (i ? 18 : -18), e.y + (i ? 12 : -12), e.mult * 0.55, false, e.atkMult * 0.55);
         }
       }
     }
@@ -1244,8 +1254,10 @@ export class BattleScene extends Phaser.Scene implements SkillHost {
   private spawnBoss(bossId: string): void {
     const cfg = BOSS_MAP[bossId];
     if (!cfg) return;
-    const mult = getWaveMultiplier(this.run.wave.wave) * this.map.hpMult * 0.5;
-    const b = new Boss(this, cfg, LAYOUT.spawnX + 30, LANE_CENTER + 36, mult);
+    const wave = this.run.wave.wave;
+    const mult = getWaveMultiplier(wave, this.run.mode) * this.map.hpMult * 0.5;
+    const atkMult = getWaveAttackMultiplier(wave, this.run.mode) * this.map.hpMult * 0.5;
+    const b = new Boss(this, cfg, LAYOUT.spawnX + 30, LANE_CENTER + 36, mult, atkMult);
     this.bosses.push(b);
     this.run.wave.bossSpawned = true;
     this.fx.ring(b.x, b.y - 60, 130, '#ff5a5a', 700);
@@ -1269,12 +1281,13 @@ export class BattleScene extends Phaser.Scene implements SkillHost {
     const anyHero = this.heroes[0];
     switch (skill) {
       case 'summon': {
-        const mult = getWaveMultiplier(this.run.wave.wave) * this.map.hpMult * 0.45;
+        const mult = getWaveMultiplier(this.run.wave.wave, this.run.mode) * this.map.hpMult * 0.45;
+        const atkMult = getWaveAttackMultiplier(this.run.wave.wave, this.run.mode) * this.map.hpMult * 0.45;
         const n = 3 + Math.floor(this.run.wave.wave / 8);
         for (let i = 0; i < n; i++) {
           const id = b.cfg.summonIds[Math.floor(Math.random() * b.cfg.summonIds.length)] ?? 'skeleton';
           const cfg = ENEMY_MAP[id];
-          if (cfg) this.spawnEnemyAt(cfg, b.x - 40 - i * 26, LANE_CENTER + (Math.random() - 0.5) * 170, mult, false);
+          if (cfg) this.spawnEnemyAt(cfg, b.x - 40 - i * 26, LANE_CENTER + (Math.random() - 0.5) * 170, mult, false, atkMult);
         }
         break;
       }
@@ -2214,14 +2227,15 @@ export class BattleScene extends Phaser.Scene implements SkillHost {
       case 'raid': {
         if (optionId === 'fight') {
           const count = 18 + this.run.wave.wave * 2;
-          const mult = getWaveMultiplier(this.run.wave.wave) * this.map.hpMult * 1.2;
+          const mult = getWaveMultiplier(this.run.wave.wave, this.run.mode) * this.map.hpMult * 1.2;
+          const atkMult = getWaveAttackMultiplier(this.run.wave.wave, this.run.mode) * this.map.hpMult * 1.2;
           const pool = ENEMY_POOL;
           for (let i = 0; i < count; i++) {
             const cfg = ENEMY_MAP[pool[Math.floor(this.rng.next() * pool.length)]];
             if (!cfg) continue;
             this.delay(i * 0.12, () => {
               if (this.finished) return;
-              this.spawnEnemyAt(cfg, LAYOUT.spawnX + this.rng.range(-40, 40), this.laneYFor(cfg.abilities.includes('flying')), mult, false);
+              this.spawnEnemyAt(cfg, LAYOUT.spawnX + this.rng.range(-40, 40), this.laneYFor(cfg.abilities.includes('flying')), mult, false, atkMult);
             });
           }
           useUiStore().pushToast('怪物突袭！', '#ff5a5a');
@@ -2582,7 +2596,7 @@ export class BattleScene extends Phaser.Scene implements SkillHost {
     this.run.enemies = this.enemies
       .filter((e) => e.alive)
       .slice(0, 400)
-      .map((e) => ({ id: e.cfg.id, x: e.x, y: e.y, hp: e.hp, maxHp: e.maxHp, elite: e.elite, boss: false, mult: e.mult }));
+      .map((e) => ({ id: e.cfg.id, x: e.x, y: e.y, hp: e.hp, maxHp: e.maxHp, elite: e.elite, boss: false, mult: e.mult, atkMult: e.atkMult }));
     this.run.rngState = this.rng.state;
   }
 
