@@ -2677,7 +2677,7 @@ export class BattleScene extends Phaser.Scene implements SkillHost {
     void force;
   }
 
-  private finish(victory: boolean): void {
+  private finish(victory: boolean, earlyExit = false): void {
     if (this.finished) return;
     this.finished = true;
     this.paused = true;
@@ -2699,14 +2699,25 @@ export class BattleScene extends Phaser.Scene implements SkillHost {
         this.fx.ring(h.homeX, h.homeY - 20, 40, '#ffd24a', 700);
       }
     }
-    audio.playSe(victory ? 'victory' : 'defeat');
-    audio.playBgm(victory ? 'victory' : 'defeat');
+    if (earlyExit) {
+      // 主动结算不播胜负演出，安静收尾
+      audio.playSe('click');
+      audio.stopBgm();
+    } else {
+      audio.playSe(victory ? 'victory' : 'defeat');
+      audio.playBgm(victory ? 'victory' : 'defeat');
+    }
     useUiStore().setBossBar({ visible: false, name: '', title: '', hp: 0, maxHp: 0, shield: false, enraged: false });
     // 交给 RunController 结算（永久金币、装备入包、成就、纪录、清除检查点）
-    this.game.events.emit('battle-finished', this.buildResult(victory));
+    this.game.events.emit('battle-finished', this.buildResult(victory, earlyExit));
   }
 
-  private buildResult(victory: boolean): BattleResult {
+  /** 暂停菜单“结算并退出”：立即结束本局并进入结算界面 */
+  settleNow(): void {
+    this.finish(false, true);
+  }
+
+  private buildResult(victory: boolean, earlyExit = false): BattleResult {
     const s = this.run.stats;
     const perma = usePlayerStore().data;
     const talentGold = 1 + (perma.talents['t_gold'] ?? 0) * 0.08;
@@ -2714,6 +2725,7 @@ export class BattleScene extends Phaser.Scene implements SkillHost {
     const permGold = Math.round(base * talentGold * (1 + (this.totalBonus.goldGain ?? 0) * 0.4) * this.map.goldMult);
     return {
       victory,
+      earlyExit,
       mode: this.run.mode,
       mapId: this.run.mapId,
       wave: this.run.wave.wave,

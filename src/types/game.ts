@@ -141,6 +141,8 @@ export interface BattleResultStats {
 
 export interface BattleResult {
   victory: boolean;
+  /** 玩家在暂停菜单主动结束本局（区别于防线被突破的失败） */
+  earlyExit?: boolean;
   mode: GameMode;
   mapId: string;
   wave: number;

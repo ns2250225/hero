@@ -168,6 +168,17 @@ class RunController {
     useUiStore().setBossBar({ visible: false, name: '', title: '', hp: 0, maxHp: 0, shield: false, enraged: false });
   }
 
+  /** 暂停菜单：结算当前冒险并退出。立即结束本局，走完整结算流程（奖励、成就、纪录）后停在结算页 */
+  settleAndExit(): void {
+    const scene = gameManager.battle;
+    if (!scene) {
+      void this.abandon();
+      return;
+    }
+    // settleNow → battle-finished → finishBattle：清除检查点、发放奖励并展示结算页
+    scene.settleNow();
+  }
+
   /** 刷新卡片 */
   refreshCards(): void {
     const scene = gameManager.battle;

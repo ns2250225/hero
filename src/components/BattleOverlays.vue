@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import PixelIcon from './PixelIcon.vue';
 import { useUiStore } from '@/stores/uiStore';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -106,6 +106,34 @@ function saveNow() {
   savedHint.value = true;
   ui.pushToast('已保存战斗检查点', '#ffd24a');
 }
+
+// 结算并退出不可恢复（清除检查点），需要二次确认
+const settleArmed = ref(false);
+let settleTimer: number | null = null;
+function confirmSettle() {
+  if (settleTimer !== null) window.clearTimeout(settleTimer);
+  if (!settleArmed.value) {
+    settleArmed.value = true;
+    settleTimer = window.setTimeout(() => {
+      settleArmed.value = false;
+      settleTimer = null;
+    }, 2600);
+    return;
+  }
+  settleArmed.value = false;
+  settleTimer = null;
+  runController.settleAndExit();
+}
+watch(
+  () => ui.showPauseMenu,
+  (open) => {
+    if (!open && settleTimer !== null) {
+      window.clearTimeout(settleTimer);
+      settleTimer = null;
+      settleArmed.value = false;
+    }
+  },
+);
 </script>
 
 <template>
@@ -119,9 +147,13 @@ function saveNow() {
         <button class="px-btn" @click="handleAutoArrange">自动布阵</button>
         <button class="px-btn" @click="ui.showAutoPanel = true">自动升级策略</button>
         <button class="px-btn gold" @click="saveNow">保存进度</button>
+        <button class="px-btn gold" :class="{ danger: settleArmed }" @click="confirmSettle">
+          {{ settleArmed ? '确认结算？' : '结算并退出' }}
+        </button>
         <button class="px-btn danger" @click="runController.abandon()">保存并退出</button>
       </div>
       <div class="px-tiny px-dim">暂停时战斗完全停止，可以重新安排站位与策略。</div>
+      <div class="px-tiny px-dim">“结算并退出”立即结束本局、发放永久奖励并清除检查点，之后无法继续该局。</div>
       <div class="px-tiny px-dim">快捷键：空格暂停 · 数字键选择升级卡片 · F 切换倍速</div>
     </div>
   </div>
@@ -196,8 +228,11 @@ function saveNow() {
   <!-- 战斗结果 -->
   <div v-if="ui.screen === 'result' && result" class="modal-mask">
     <div class="dialog result px-panel">
-      <div class="px-title" :style="{ color: result.victory ? '#ffd24a' : '#ff6a6a' }">
-        {{ result.victory ? '冒险成功！' : '防线被突破…' }}
+      <div
+        class="px-title"
+        :style="{ color: result.victory ? '#ffd24a' : result.earlyExit ? '#8fd8ff' : '#ff6a6a' }"
+      >
+        {{ result.victory ? '冒险成功！' : result.earlyExit ? '本局结算' : '防线被突破…' }}
       </div>
       <div v-if="result.newRecord" class="record">新纪录！</div>
       <div class="stats-grid">
